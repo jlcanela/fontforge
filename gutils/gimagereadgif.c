@@ -39,6 +39,12 @@ static int a_file_must_define_something=0;	/* ANSI says so */
 #include "gimage.h"
 #include <gif_lib.h>
 
+#if GIFLIB_MAJOR > 5 || GIFLIB_MAJOR == 5 && GIFLIB_MINOR >= 1
+  #define GIF_CLOSE_FILE(gif) DGifCloseFile(gif, NULL)
+#else
+  #define GIF_CLOSE_FILE(gif) DGifCloseFile(gif)
+#endif
+
 static GImage *ProcessSavedImage(GifFileType *gif,struct SavedImage *si,int il) {
 /* Process each gif image into an internal FF format. Return NULL if error */
     GImage *ret;
@@ -170,13 +176,13 @@ GImage *GImageReadGif(char *filename) {
 
     if ( DGifSlurp(gif)!=GIF_OK ) {
 	fprintf(stderr,"Bad input file \"%s\"\n",filename );
-	DGifCloseFile(gif);
+	GIF_CLOSE_FILE(gif);
 	return( NULL );
     }
 
     /* Process each image so that it/they can be imported into FF. */
     if ( (images=(GImage **) malloc(gif->ImageCount*sizeof(GImage *)))==NULL ) {
-	DGifCloseFile(gif);
+	GIF_CLOSE_FILE(gif);
 	NoMoreMemMessage();
 	return( NULL );
     }
@@ -185,7 +191,7 @@ GImage *GImageReadGif(char *filename) {
 	if ( (images[i]=ProcessSavedImage(gif,&gif->SavedImages[i],il))==NULL ) {
 	    while ( --i>=0 ) free(images[i]);
 	    free(images);
-	    DGifCloseFile(gif);
+	    GIF_CLOSE_FILE(gif);
 	    return( NULL );
 	}
     }
@@ -195,7 +201,7 @@ GImage *GImageReadGif(char *filename) {
 	ret = images[0];
     else
 	ret = GImageCreateAnimation(images,gif->ImageCount);
-    DGifCloseFile(gif);
+    GIF_CLOSE_FILE(gif);
     free(images);
     return( ret );
 }
